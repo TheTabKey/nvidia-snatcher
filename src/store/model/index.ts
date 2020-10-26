@@ -1,3 +1,4 @@
+import {config, defaultStoreData} from '../../config';
 import {Adorama} from './adorama';
 import {Alternate} from './alternate';
 import {AlternateNL} from './alternate-nl';
@@ -19,6 +20,7 @@ import {Caseking} from './caseking';
 import {Ccl} from './ccl';
 import {Computeruniverse} from './computeruniverse';
 import {Coolblue} from './coolblue';
+import {Coolmod} from './coolmod';
 import {Currys} from './currys';
 import {Cyberport} from './cyberport';
 import {Ebuyer} from './ebuyer';
@@ -42,13 +44,11 @@ import {ProshopDE} from './proshop-de';
 import {ProshopDK} from './proshop-dk';
 import {Saturn} from './saturn';
 import {Scan} from './scan';
-import {Store} from './store';
 import {Very} from './very';
 import {Zotac} from './zotac';
-import {config} from '../../config';
 import {logger} from '../../logger';
 
-const masterList = new Map([
+export const storeList = new Map([
 	[Adorama.name, Adorama],
 	[Alternate.name, Alternate],
 	[AlternateNL.name, AlternateNL],
@@ -70,6 +70,7 @@ const masterList = new Map([
 	[Ccl.name, Ccl],
 	[Computeruniverse.name, Computeruniverse],
 	[Coolblue.name, Coolblue],
+	[Coolmod.name, Coolmod],
 	[Currys.name, Currys],
 	[Cyberport.name, Cyberport],
 	[Ebuyer.name, Ebuyer],
@@ -97,31 +98,64 @@ const masterList = new Map([
 	[Zotac.name, Zotac]
 ]);
 
-const list = new Map();
+const brands = new Set();
+const series = new Set();
+const models = new Set();
 
-for (const name of config.store.stores) {
-	if (masterList.has(name)) {
-		list.set(name, masterList.get(name));
+for (const storeData of config.store.stores) {
+	const store = storeList.get(storeData.name);
+	if (store) {
+		store.minPageSleep = storeData.minPageSleep;
+		store.maxPageSleep = storeData.maxPageSleep;
 	} else {
-		const logString = `No store named ${name}, skipping.`;
-		logger.warn(logString);
+		logger.warn(`No store named ${storeData.name}, skipping.`);
 	}
 }
 
-logger.info(`ℹ selected stores: ${Array.from(list.keys()).join(', ')}`);
+for (const store of storeList.values()) {
+	for (const link of store.links) {
+		brands.add(link.brand);
+		series.add(link.series);
+		models.add(link.model);
+	}
+
+	if (store.minPageSleep === undefined) {
+		store.minPageSleep = defaultStoreData.minPageSleep;
+	}
+
+	if (store.maxPageSleep === undefined) {
+		store.maxPageSleep = defaultStoreData.maxPageSleep;
+	}
+}
+
+export function getAllBrands() {
+	return Array.from(brands);
+}
+
+export function getAllSeries() {
+	return Array.from(series);
+}
+
+export function getAllModels() {
+	return Array.from(models);
+}
+
+if (config.store.stores.length > 0) {
+	logger.info(`ℹ selected stores: ${config.store.stores.map(store => store.name).join(', ')}`);
+}
 
 if (config.store.showOnlyBrands.length > 0) {
 	logger.info(`ℹ selected brands: ${config.store.showOnlyBrands.join(', ')}`);
 }
 
 if (config.store.showOnlyModels.length > 0) {
-	logger.info(`ℹ selected models: ${config.store.showOnlyModels.join(', ')}`);
+	logger.info(`ℹ selected models: ${config.store.showOnlyModels.map(entry => {
+		return entry.series ? entry.name + ' (' + entry.series + ')' : entry.name;
+	}).join(', ')}`);
 }
 
 if (config.store.showOnlySeries.length > 0) {
 	logger.info(`ℹ selected series: ${config.store.showOnlySeries.join(', ')}`);
 }
-
-export const Stores = Array.from(list.values()) as Store[];
 
 export * from './store';
